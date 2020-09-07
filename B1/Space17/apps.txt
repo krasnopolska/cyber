@@ -1,0 +1,1 @@
+['DAB radio', 'Lava lamp', 'CD player']
