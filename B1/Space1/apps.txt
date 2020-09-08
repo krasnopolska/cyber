@@ -1,0 +1,1 @@
+['Desktop PC', 'PC monitor', 'Printer', 'Router', 'Electric heater', 'Electric heater', 'Shredder']

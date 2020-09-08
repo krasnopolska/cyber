@@ -1,0 +1,1 @@
+['Television', 'Set top box', 'DVD player/recorder', 'HiFi', 'Lamp']

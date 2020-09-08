@@ -1,0 +1,1 @@
+['Fridge', 'Dishwasher', 'Toaster', 'Coffee maker', 'Coffee maker', 'Kettle', 'DAB radio']
