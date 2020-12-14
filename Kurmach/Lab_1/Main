@@ -1,0 +1,97 @@
+import pandas as pd
+import os
+import numpy as np
+import itertools
+from matplotlib import pyplot as plt
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__)) + '\\Room_'
+INTERIOR_TEMPERATURE = '\\Air temperature.csv'
+INTERIOR_VALUME = '\\volume.txt'
+
+
+
+c_star = list(np.arange(1200.0, 10001.0, 800.0))
+k_star = list(np.arange(0.1, 1.01, 0.1))
+c_k_grid = list(itertools.product(c_star, k_star))
+
+def read_data():
+    internal_temp = 0
+    n = 0
+    for i in range(1, 7):
+        df = pd.read_csv(ROOT_DIR + str(i) + INTERIOR_TEMPERATURE, names=['dateTime', 'value'],
+                         index_col=['dateTime'], infer_datetime_format=True, parse_dates=['dateTime'])
+        df = df[df.index.month.isin([10, 11, 12])]
+        df = df.resample('60min').mean()
+        internal_temp += df.value
+        n += 1
+    internal_temp /= n
+    return internal_temp
+
+def read_q():
+    volume = 0
+    q = []
+    q_stroke = []
+    data = 0
+    for i in range(1, 7):
+        df = pd.read_csv(ROOT_DIR + str(i) + INTERIOR_VALUME, names=['volume'])
+        volume += df.volume.sum()
+    gas = pd.read_csv('gas_to_calc.csv', index_col=['dateTime'], infer_datetime_format=True, parse_dates=['dateTime'])
+    gas = gas[gas.index.month.isin([10, 11, 12])]
+    gas = gas.resample('60min').mean()
+    q = gas.data.to_numpy().flatten()
+
+    for i in q:
+        data = float(i)/volume
+        q_stroke.append(data)
+    return  q_stroke
+
+
+def read_ext():
+    ext = pd.read_csv('ext.csv', index_col=['dateTime'], infer_datetime_format=True, parse_dates=['dateTime'])
+    ext = ext.drop('Unnamed: 0', 1)
+    ext = ext[ext.index.month.isin([10, 11, 12])]
+    delta_ext = ext.diff()\
+                .to_numpy()\
+                .flatten()
+    ext = ext.to_numpy().flatten()
+
+    return ext, delta_ext
+
+
+
+T_i_stroke = read_data().values
+
+t_e, delta_t_e =read_ext()
+stroke_q = read_q()
+
+def calc_t_star(c, k):
+    t_star = T_i_stroke - t_e[0]
+    d = []
+    for i in range(1, len(stroke_q)-1):
+        t_star = (stroke_q[i] - (c * delta_t_e[i]) + (c * t_star))/(c + k)
+        d.append(t_star)
+    return d
+
+
+# print(t_e)
+# print(stroke_q)
+calculated = calc_t_star(5200, 0.8)
+plt.plot(calculated)
+plt.plot(T_i_stroke - t_e)
+plt.show()
+
+def inverse_result():
+    d_main = []
+    best_fit = []
+    k = 0
+    for i in c_k_grid:
+        temp = calc_t_star(i[0], i[1])
+        func = np.sum(np.power(temp - (T_i_stroke - t_e), 2))/(2*len(T_i_stroke))
+        best_fit.append(func)
+    index = np.argmin(np.array(best_fit))
+    return best_fit[index], c_k_grid[index]
+
+    # return d
+
+#best_fit, c_k_optimal = inverse_result()
+#print(best_fit, c_k_optimal)
